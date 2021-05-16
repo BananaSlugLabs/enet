@@ -18,8 +18,10 @@
 #endif
 
 typedef int ENetSocket;
+typedef int ENetInterrupt;
 
 #define ENET_SOCKET_NULL -1
+#define ENET_INTERRUPT_NULL -1
 
 #define ENET_HOST_TO_NET_16(value) (htons (value)) /**< macro that converts host to net byte-order of a 16-bit value */
 #define ENET_HOST_TO_NET_32(value) (htonl (value)) /**< macro that converts host to net byte-order of a 32-bit value */

@@ -6,6 +6,14 @@ project(enet)
 include(CheckFunctionExists)
 include(CheckStructHasMember)
 include(CheckTypeSize)
+
+option(ENET_ENABLE_INTERRUPT
+	"Supports the interruption of the enet host service loop.")
+
+option(ENET_ENABLE_LOCKING
+	"Enable mutual exclusion support.")
+
+option(ENET_ENABLE_SYNC         "Enables synchronization.")
 check_function_exists("fcntl" HAS_FCNTL)
 check_function_exists("poll" HAS_POLL)
 check_function_exists("getaddrinfo" HAS_GETADDRINFO)
@@ -79,7 +87,7 @@ set(SOURCE_FILES
     peer.c
     protocol.c
     unix.c
-    win32.c)
+    win32.c example/test_threading.c)
 
 source_group(include FILES ${INCLUDE_FILES})
 source_group(source FILES ${SOURCE_FILES})
@@ -92,3 +100,5 @@ add_library(enet STATIC
 if (MINGW)
     target_link_libraries(enet winmm ws2_32)
 endif()
+
+add_subdirectory(example)

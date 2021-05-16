@@ -60,6 +60,9 @@ enet_host_create (const ENetAddress * address, size_t peerCount, size_t channelL
        return NULL;
     }
 
+    host -> interrupt = enet_interrupt_create();
+    // TODO: Error handling - this can hypothetically fail.
+
     enet_socket_set_option (host -> socket, ENET_SOCKOPT_NONBLOCK, 1);
     enet_socket_set_option (host -> socket, ENET_SOCKOPT_BROADCAST, 1);
     enet_socket_set_option (host -> socket, ENET_SOCKOPT_RCVBUF, ENET_HOST_RECEIVE_BUFFER_SIZE);
@@ -145,6 +148,7 @@ enet_host_destroy (ENetHost * host)
       return;
 
     enet_socket_destroy (host -> socket);
+    enet_interrupt_destroy(host -> interrupt);
 
     for (currentPeer = host -> peers;
          currentPeer < & host -> peers [host -> peerCount];
@@ -158,6 +162,11 @@ enet_host_destroy (ENetHost * host)
 
     enet_free (host -> peers);
     enet_free (host);
+}
+
+void
+enet_host_interrupt (ENetHost * host) {
+    enet_interrupt_signal(host -> interrupt);
 }
 
 enet_uint32

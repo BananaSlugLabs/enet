@@ -20,8 +20,10 @@
 #include <winsock2.h>
 
 typedef SOCKET ENetSocket;
+typedef int ENetInterrupt;
 
 #define ENET_SOCKET_NULL INVALID_SOCKET
+#define ENET_INTERRUPT_NULL -1
 
 #define ENET_HOST_TO_NET_16(value) (htons (value))
 #define ENET_HOST_TO_NET_32(value) (htonl (value))

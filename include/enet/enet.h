@@ -49,7 +49,8 @@ typedef enum _ENetSocketWait
    ENET_SOCKET_WAIT_NONE      = 0,
    ENET_SOCKET_WAIT_SEND      = (1 << 0),
    ENET_SOCKET_WAIT_RECEIVE   = (1 << 1),
-   ENET_SOCKET_WAIT_INTERRUPT = (1 << 2)
+   ENET_SOCKET_WAIT_INTERRUPT = (1 << 2),
+   ENET_SOCKET_INTERRUPTED    = (1 << 3)
 } ENetSocketWait;
 
 typedef enum _ENetSocketOption
@@ -91,6 +92,7 @@ typedef struct _ENetAddress
    enet_uint32 host;
    enet_uint16 port;
 } ENetAddress;
+
 
 /**
  * Packet flag bit constants.
@@ -363,6 +365,7 @@ typedef int (ENET_CALLBACK * ENetInterceptCallback) (struct _ENetHost * host, st
 typedef struct _ENetHost
 {
    ENetSocket           socket;
+   ENetInterrupt        interrupt;
    ENetAddress          address;                     /**< Internet address of the host */
    enet_uint32          incomingBandwidth;           /**< downstream bandwidth of the host */
    enet_uint32          outgoingBandwidth;           /**< upstream bandwidth of the host */
@@ -428,7 +431,11 @@ typedef enum _ENetEventType
      * the packet that was received; this packet must be destroyed with
      * enet_packet_destroy after use.
      */
-   ENET_EVENT_TYPE_RECEIVE    = 3
+   ENET_EVENT_TYPE_RECEIVE    = 3,
+
+    /** Interrupted event.
+      */
+    ENET_EVENT_TYPE_INTERRUPT    = 4
 } ENetEventType;
 
 /**
@@ -446,17 +453,17 @@ typedef struct _ENetEvent
 } ENetEvent;
 
 /** @defgroup global ENet global functions
-    @{ 
+    @{
 */
 
-/** 
+/**
   Initializes ENet globally.  Must be called prior to using any functions in
   ENet.
   @returns 0 on success, < 0 on failure
 */
 ENET_API int enet_initialize (void);
 
-/** 
+/**
   Initializes ENet globally and supplies user-overridden callbacks. Must be called prior to using any functions in ENet. Do not use enet_initialize() if you use this variant. Make sure the ENetCallbacks structure is zeroed out so that any additional callbacks added in future versions will be properly ignored.
 
   @param version the constant ENET_VERSION should be supplied so ENet knows which version of ENetCallbacks struct to use
@@ -465,7 +472,7 @@ ENET_API int enet_initialize (void);
 */
 ENET_API int enet_initialize_with_callbacks (ENetVersion version, const ENetCallbacks * inits);
 
-/** 
+/**
   Shuts down ENet globally.  Should be called when a program that has
   initialized ENet exits.
 */
@@ -473,7 +480,7 @@ ENET_API void enet_deinitialize (void);
 
 /**
   Gives the linked version of the ENet library.
-  @returns the version number 
+  @returns the version number
 */
 ENET_API ENetVersion enet_linked_version (void);
 
@@ -502,12 +509,21 @@ ENET_API ENetSocket enet_socket_accept (ENetSocket, ENetAddress *);
 ENET_API int        enet_socket_connect (ENetSocket, const ENetAddress *);
 ENET_API int        enet_socket_send (ENetSocket, const ENetAddress *, const ENetBuffer *, size_t);
 ENET_API int        enet_socket_receive (ENetSocket, ENetAddress *, ENetBuffer *, size_t);
-ENET_API int        enet_socket_wait (ENetSocket, enet_uint32 *, enet_uint32);
+ENET_API int        enet_socket_wait (ENetSocket, ENetInterrupt, enet_uint32 *, enet_uint32);
 ENET_API int        enet_socket_set_option (ENetSocket, ENetSocketOption, int);
 ENET_API int        enet_socket_get_option (ENetSocket, ENetSocketOption, int *);
 ENET_API int        enet_socket_shutdown (ENetSocket, ENetSocketShutdown);
 ENET_API void       enet_socket_destroy (ENetSocket);
-ENET_API int        enet_socketset_select (ENetSocket, ENetSocketSet *, ENetSocketSet *, enet_uint32);
+//ENET_API int        enet_socketset_select (ENetSocket, ENetSocketSet *, ENetSocketSet *, enet_uint32);
+
+/** @} */
+
+/** @defgroup interrupt ENet interrupt fucntions
+    @{
+*/
+ENET_API ENetInterrupt enet_interrupt_create ();
+ENET_API void enet_interrupt_destroy (ENetInterrupt);
+ENET_API void enet_interrupt_signal (ENetInterrupt i);
 
 /** @} */
 
@@ -567,6 +583,7 @@ ENET_API void       enet_host_destroy (ENetHost *);
 ENET_API ENetPeer * enet_host_connect (ENetHost *, const ENetAddress *, size_t, enet_uint32);
 ENET_API int        enet_host_check_events (ENetHost *, ENetEvent *);
 ENET_API int        enet_host_service (ENetHost *, ENetEvent *, enet_uint32);
+ENET_API void       enet_host_interrupt (ENetHost *);
 ENET_API void       enet_host_flush (ENetHost *);
 ENET_API void       enet_host_broadcast (ENetHost *, enet_uint8, ENetPacket *);
 ENET_API void       enet_host_compress (ENetHost *, const ENetCompressor *);

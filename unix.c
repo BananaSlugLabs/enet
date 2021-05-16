@@ -61,6 +61,8 @@ typedef int socklen_t;
 #define MSG_NOSIGNAL 0
 #endif
 
+#include <sys/eventfd.h>
+#include <stdio.h>
 static enet_uint32 timeBase = 0;
 
 int
@@ -524,22 +526,25 @@ enet_socketset_select (ENetSocket maxSocket, ENetSocketSet * readSet, ENetSocket
 }
 
 int
-enet_socket_wait (ENetSocket socket, enet_uint32 * condition, enet_uint32 timeout)
+enet_socket_wait (ENetSocket socket, ENetInterrupt interrupt, enet_uint32 * condition, enet_uint32 timeout)
 {
 #ifdef HAS_POLL
-    struct pollfd pollSocket;
+    struct pollfd pollSocket[2];
     int pollCount;
-    
-    pollSocket.fd = socket;
-    pollSocket.events = 0;
+
+    pollSocket[0].fd = socket;
+    pollSocket[0].events = 0;
+
+    pollSocket[1].fd = interrupt;
+    pollSocket[1].events = POLLIN;
 
     if (* condition & ENET_SOCKET_WAIT_SEND)
-      pollSocket.events |= POLLOUT;
+      pollSocket[0].events |= POLLOUT;
 
     if (* condition & ENET_SOCKET_WAIT_RECEIVE)
-      pollSocket.events |= POLLIN;
+      pollSocket[0].events |= POLLIN;
 
-    pollCount = poll (& pollSocket, 1, timeout);
+    pollCount = poll (pollSocket, interrupt != ENET_INTERRUPT_NULL ? 2 : 1, timeout);
 
     if (pollCount < 0)
     {
@@ -558,10 +563,16 @@ enet_socket_wait (ENetSocket socket, enet_uint32 * condition, enet_uint32 timeou
     if (pollCount == 0)
       return 0;
 
-    if (pollSocket.revents & POLLOUT)
+    if (pollSocket[1].revents & POLLIN) {
+        * condition |= ENET_SOCKET_INTERRUPTED;
+        int64_t val;
+        read(interrupt, &val, sizeof(val));
+    }
+
+    if (pollSocket[0].revents & POLLOUT)
       * condition |= ENET_SOCKET_WAIT_SEND;
     
-    if (pollSocket.revents & POLLIN)
+    if (pollSocket[0].revents & POLLIN)
       * condition |= ENET_SOCKET_WAIT_RECEIVE;
 
     return 0;
@@ -609,6 +620,29 @@ enet_socket_wait (ENetSocket socket, enet_uint32 * condition, enet_uint32 timeou
 
     return 0;
 #endif
+}
+
+ENetInterrupt
+enet_interrupt_create ()
+{
+    return eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+}
+
+void
+enet_interrupt_signal (ENetInterrupt i)
+{
+    if (i!=ENET_INTERRUPT_NULL) {
+        int64_t val = 0x1;
+        write(i, &val, sizeof(val));
+    }
+}
+
+void
+enet_interrupt_destroy (ENetInterrupt i)
+{
+    if (i!=ENET_INTERRUPT_NULL) {
+        close(i);
+    }
 }
 
 #endif

@@ -438,5 +438,21 @@ enet_socket_wait (ENetSocket socket, enet_uint32 * condition, enet_uint32 timeou
     return 0;
 } 
 
+ENetInterrupt
+enet_interrupt_create ()
+{
+    return ENET_INTERRUPT_NULL;
+}
+
+void
+enet_interrupt_signal (ENetInterrupt i)
+{
+}
+
+void
+enet_interrupt_destroy (ENetInterrupt i)
+{
+}
+
 #endif
 

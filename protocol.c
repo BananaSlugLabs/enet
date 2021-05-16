@@ -1864,13 +1864,18 @@ enet_host_service (ENetHost * host, ENetEvent * event, enet_uint32 timeout)
 
           waitCondition = ENET_SOCKET_WAIT_RECEIVE | ENET_SOCKET_WAIT_INTERRUPT;
 
-          if (enet_socket_wait (host -> socket, & waitCondition, ENET_TIME_DIFFERENCE (timeout, host -> serviceTime)) != 0)
+          if (enet_socket_wait (host -> socket, host -> interrupt, & waitCondition, ENET_TIME_DIFFERENCE (timeout, host -> serviceTime)) != 0)
             return -1;
+
+          if (waitCondition & ENET_SOCKET_INTERRUPTED) {
+              event->type = ENET_EVENT_TYPE_INTERRUPT;
+              return 1;
+          }
        }
        while (waitCondition & ENET_SOCKET_WAIT_INTERRUPT);
 
        host -> serviceTime = enet_time_get ();
-    } while (waitCondition & ENET_SOCKET_WAIT_RECEIVE);
+    } while ((waitCondition & ENET_SOCKET_WAIT_RECEIVE));
 
     return 0; 
 }
